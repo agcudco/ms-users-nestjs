@@ -1,11 +1,16 @@
 import {
+  Column,
   CreateDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
+  UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
+
+import type { Relation } from 'typeorm';
 
 import { User } from '../../users/entities/user.entity.js';
 import { Role } from '../../roles/entities/role.entity.js';
@@ -35,7 +40,7 @@ export class UserRole {
   @JoinColumn({
     name: 'user_id',
   })
-  user!: User;
+  user!: Relation<User>;
 
   @ManyToOne(() => Role, (role) => role.userRoles, {
     nullable: false,
@@ -44,11 +49,28 @@ export class UserRole {
   @JoinColumn({
     name: 'role_id',
   })
-  role!: Role;
+  role!: Relation<Role>;
 
   @CreateDateColumn({
     name: 'fecha_asignacion',
     type: 'timestamp',
   })
   fechaAsignacion!: Date;
+
+  @Column({
+    type: 'boolean',
+    default: true,
+  })
+  estado!: boolean;
+
+  @VersionColumn({
+    name: 'version',
+  })
+  version!: number;
+
+  @UpdateDateColumn({
+    name: 'fecha_actualizacion',
+    type: 'timestamp',
+  })
+  fechaActualizacion!: Date;
 }

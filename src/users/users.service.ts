@@ -1,26 +1,182 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+import { InjectRepository } from '@nestjs/typeorm';
+
+import * as argon2 from 'argon2';
+
+import { QueryFailedError, Repository } from 'typeorm';
+
 import { CreateUserDto } from './dto/create-user.dto.js';
+
 import { UpdateUserDto } from './dto/update-user.dto.js';
+
+import { User } from './entities/user.entity.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto/pagination-query.dto.js';
+
+function isUniqueViolation(error: unknown): boolean {
+  if (!(error instanceof QueryFailedError)) {
+    return false;
+  }
+
+  const driverError = error.driverError as {
+    code?: string;
+  };
+
+  return driverError?.code === '23505';
+}
 
 @Injectable()
 export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
+  ) {}
+
+  async create(dto: CreateUserDto): Promise<User> {
+    //0603977224
+    const { password, ...data } = dto;
+
+    const passwordHash = await argon2.hash(password, {
+      type: argon2.argon2id,
+    });
+
+    const user = this.usersRepository.create({
+      ...data,
+      passwordHash,
+    });
+
+    try {
+      const saved = await this.usersRepository.save(user);
+      return this.findOne(saved.id);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(
+          'Los datos del usuario entran en conflicto con un registro existente',
+        );
+      }
+      throw error;
+    }
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll(pagination: PaginationQueryDto) {
+    const { page, limit } = pagination;
+
+    const [data, total] = await this.usersRepository.findAndCount({
+      relations: {
+        userRoles: {
+          role: true,
+        },
+      },
+
+      skip: (page - 1) * limit,
+
+      take: limit,
+
+      order: {
+        fechaCreacion: 'DESC',
+      },
+    });
+
+    return {
+      data,
+
+      meta: {
+        page,
+        limit,
+        total,
+
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: string): Promise<User> {
+    const user = await this.usersRepository.findOne({
+      where: {
+        id,
+      },
+
+      relations: {
+        userRoles: {
+          role: true,
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    return user;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async findByCedula(cedula: string): Promise<User> {
+    const user = await this.usersRepository.findOne({
+      where: {
+        cedula,
+      },
+
+      relations: {
+        userRoles: {
+          role: true,
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return user;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async exists(id: string): Promise<boolean> {
+    return this.usersRepository.exists({
+      where: {
+        id,
+      },
+    });
+  }
+
+  async update(id: string, dto: UpdateUserDto): Promise<User> {
+    const user = await this.usersRepository.findOneBy({
+      id,
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const { password, ...data } = dto;
+
+    Object.assign(user, data);
+
+    if (password) {
+      user.passwordHash = await argon2.hash(password, {
+        type: argon2.argon2id,
+      });
+    }
+
+    try {
+      await this.usersRepository.save(user);
+      return this.findOne(id);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(
+          'Los datos del usuario entran en conflicto con un registro existente',
+        );
+      }
+      throw error;
+    }
+  }
+
+  async remove(id: string): Promise<void> {
+    const result = await this.usersRepository.softDelete(id);
+    if (!result.affected) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
   }
 }

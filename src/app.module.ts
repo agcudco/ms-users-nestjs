@@ -1,13 +1,81 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
-import { UsersModule } from './users/users.module.js';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { envSchema } from './config/env.schema.js';
 import { RolesModule } from './roles/roles.module.js';
 import { UserRolesModule } from './user-roles/user-roles.module.js';
+import { UsersModule } from './users/users.module.js';
+import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware.js';
 
 @Module({
-  imports: [UsersModule, RolesModule, UserRolesModule],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      validationSchema: envSchema,
+    }),
+
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.getOrThrow<string>('DB_HOST'),
+        port: Number(config.getOrThrow('DB_PORT')),
+        username: config.getOrThrow<string>('DB_USERNAME'),
+        password: config.getOrThrow<string>('DB_PASSWORD'),
+        database: config.getOrThrow<string>('DB_DATABASE'),
+        autoLoadEntities: true,
+
+        /*
+         * Secure by Design:
+         * nunca modificar automáticamente
+         * el esquema.
+         */
+        synchronize: true,
+        retryAttempts: 5,
+        retryDelay: 2000,
+        logging: ['error'],
+        ssl:
+          config.get<string>('DB_SSL') === 'true'
+            ? {
+                rejectUnauthorized: true,
+              }
+            : false,
+        extra: {
+          max: 10,
+          connectionTimeoutMillis: 5000,
+          idleTimeoutMillis: 30000,
+        },
+      }),
+    }),
+
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: Number(config.getOrThrow('RATE_LIMIT_TTL_MS')),
+          limit: Number(config.getOrThrow('RATE_LIMIT_MAX')),
+          blockDuration: Number(config.getOrThrow('RATE_LIMIT_BLOCK_MS')),
+        },
+      ],
+    }),
+    UsersModule,
+    RolesModule,
+    UserRolesModule,
+  ],
+
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}

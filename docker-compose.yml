@@ -7,15 +7,15 @@ services:
     restart: unless-stopped
 
     environment:
-      POSTGRES_DB: ${DB_DATABASE}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: "${DB_DATABASE:?DB_DATABASE no definido}"
+      POSTGRES_USER: "${DB_USERNAME:?DB_USERNAME no definido}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD no definido}"
 
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
 
     volumes:
-      - users_postgres_data:/var/lib/postgresql/data
+      - users_postgres_data:/var/lib/postgresql
 
     healthcheck:
       test:
@@ -34,8 +34,10 @@ services:
     networks:
       - users-network
 
+
 volumes:
   users_postgres_data:
+
 
 networks:
   users-network:

@@ -9,7 +9,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-
+import type { Relation } from 'typeorm';
 import { UserRole } from '../../user-roles/entities/user-role.entity.js';
 
 @Entity({
@@ -26,7 +26,7 @@ export class Role {
     type: 'varchar',
     length: 50,
   })
-  rol!: string;
+  rol!: string; //ADMIN - admin - Admin
 
   @Column({
     type: 'boolean',
@@ -59,5 +59,5 @@ export class Role {
   fechaEliminacion!: Date | null;
 
   @OneToMany(() => UserRole, (userRole) => userRole.role)
-  userRoles!: UserRole[];
+  userRoles!: Relation<UserRole[]>;
 }

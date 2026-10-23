@@ -1,34 +1,92 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { RolesService } from './roles.service.js';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+
+import { Throttle } from '@nestjs/throttler';
+
 import { CreateRoleDto } from './dto/create-role.dto.js';
+
 import { UpdateRoleDto } from './dto/update-role.dto.js';
+
+import { RolesService } from './roles.service.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto/pagination-query.dto.js';
 
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post()
-  create(@Body() createRoleDto: CreateRoleDto) {
-    return this.rolesService.create(createRoleDto);
+  @Throttle({
+    default: {
+      limit: 20,
+      ttl: 60_000,
+    },
+  })
+  create(
+    @Body()
+    dto: CreateRoleDto,
+  ) {
+    return this.rolesService.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.rolesService.findAll();
+  findAll(
+    @Query()
+    pagination: PaginationQueryDto,
+  ) {
+    return this.rolesService.findAll(pagination);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.rolesService.findOne(+id);
+  findOne(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+      }),
+    )
+    id: string,
+  ) {
+    return this.rolesService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
-    return this.rolesService.update(+id, updateRoleDto);
+  update(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+      }),
+    )
+    id: string,
+
+    @Body()
+    dto: UpdateRoleDto,
+  ) {
+    return this.rolesService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.rolesService.remove(+id);
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+      }),
+    )
+    id: string,
+  ): Promise<void> {
+    await this.rolesService.remove(id);
   }
 }

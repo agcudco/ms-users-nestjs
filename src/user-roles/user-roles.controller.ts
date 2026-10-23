@@ -1,34 +1,71 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { UserRolesService } from './user-roles.service.js';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
+
+import { Throttle } from '@nestjs/throttler';
+
 import { CreateUserRoleDto } from './dto/create-user-role.dto.js';
-import { UpdateUserRoleDto } from './dto/update-user-role.dto.js';
+
+import { UserRolesService } from './user-roles.service.js';
 
 @Controller('user-roles')
 export class UserRolesController {
   constructor(private readonly userRolesService: UserRolesService) {}
 
   @Post()
-  create(@Body() createUserRoleDto: CreateUserRoleDto) {
-    return this.userRolesService.create(createUserRoleDto);
+  @Throttle({
+    default: {
+      limit: 20,
+      ttl: 60_000,
+    },
+  })
+  create(
+    @Body()
+    dto: CreateUserRoleDto,
+  ) {
+    return this.userRolesService.create(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.userRolesService.findAll();
+  @Get('user/:userId')
+  findByUser(
+    @Param(
+      'userId',
+      new ParseUUIDPipe({
+        version: '4',
+      }),
+    )
+    userId: string,
+  ) {
+    return this.userRolesService.findByUser(userId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userRolesService.findOne(+id);
-  }
+  @Delete(':userId/:roleId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param(
+      'userId',
+      new ParseUUIDPipe({
+        version: '4',
+      }),
+    )
+    userId: string,
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserRoleDto: UpdateUserRoleDto) {
-    return this.userRolesService.update(+id, updateUserRoleDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userRolesService.remove(+id);
+    @Param(
+      'roleId',
+      new ParseUUIDPipe({
+        version: '4',
+      }),
+    )
+    roleId: string,
+  ): Promise<void> {
+    await this.userRolesService.remove(userId, roleId);
   }
 }

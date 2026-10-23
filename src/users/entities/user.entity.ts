@@ -1,4 +1,5 @@
 import { Exclude } from 'class-transformer';
+import type { Relation } from 'typeorm';
 
 import {
   Check,
@@ -28,6 +29,10 @@ import { UserRole } from '../../user-roles/entities/user-role.entity.js';
 @Index('UQ_users_email', ['email'], {
   unique: true,
 })
+@Index('UQ_users_telefono', ['telefono'], {
+  unique: true,
+})
+@Check('CHK_users_telefono', `"telefono" ~ '^[0-9]{10}$'`)
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -67,6 +72,12 @@ export class User {
     length: 150,
   })
   email!: string;
+
+  @Column({
+    type: 'varchar',
+    length: 10,
+  })
+  telefono!: string;
 
   @Exclude()
   @Column({
@@ -108,5 +119,5 @@ export class User {
   fechaEliminacion!: Date | null;
 
   @OneToMany(() => UserRole, (userRole) => userRole.user)
-  userRoles!: UserRole[];
+  userRoles!: Relation<UserRole[]>;
 }
