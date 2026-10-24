@@ -18,28 +18,38 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UsersService } from './users.service.js';
 import { CedulaPipe } from '../common/pipes/cedula/cedula.pipe.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto/pagination-query.dto.js';
+import { Roles } from '../auth/decorators/roles/roles.decorator.js';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @Roles('ADMIN')
   @Throttle({
     default: {
       limit: 10,
       ttl: 60_000,
     },
   })
-  create(@Body() dto: CreateUserDto) {
+  create(
+    @Body()
+    dto: CreateUserDto,
+  ) {
     return this.usersService.create(dto);
   }
 
   @Get()
-  findAll(@Query() pagination: PaginationQueryDto) {
+  @Roles('ADMIN', 'OPERADOR')
+  findAll(
+    @Query()
+    pagination: PaginationQueryDto,
+  ) {
     return this.usersService.findAll(pagination);
   }
 
   @Get('cedula/:cedula')
+  @Roles('ADMIN', 'OPERADOR')
   findByCedula(
     @Param('cedula', CedulaPipe)
     cedula: string,
@@ -48,6 +58,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @Roles('ADMIN', 'OPERADOR')
   findOne(
     @Param(
       'id',
@@ -61,12 +72,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Throttle({
-    default: {
-      limit: 20,
-      ttl: 60_000,
-    },
-  })
+  @Roles('ADMIN')
   update(
     @Param(
       'id',
@@ -83,6 +89,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param(

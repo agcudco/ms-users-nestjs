@@ -94,6 +94,13 @@ export class User {
   })
   estado!: boolean;
 
+  @Column({
+    name: 'token_version',
+    type: 'integer',
+    default: 0,
+  })
+  tokenVersion!: number;
+
   @VersionColumn({
     name: 'version',
   })

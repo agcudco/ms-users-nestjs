@@ -4,16 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { IsNull, QueryFailedError, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import * as argon2 from 'argon2';
-
-import { QueryFailedError, Repository } from 'typeorm';
-
 import { CreateUserDto } from './dto/create-user.dto.js';
-
 import { UpdateUserDto } from './dto/update-user.dto.js';
-
 import { User } from './entities/user.entity.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto/pagination-query.dto.js';
 
@@ -175,6 +170,103 @@ export class UsersService {
 
   async remove(id: string): Promise<void> {
     const result = await this.usersRepository.softDelete(id);
+    if (!result.affected) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+  }
+
+  async findForAuthentication(identifier: string): Promise<User | null> {
+    const normalized = identifier.trim().toLowerCase();
+
+    return (
+      this.usersRepository
+        .createQueryBuilder('user')
+
+        /*
+         * passwordHash tiene:
+         *
+         * select: false
+         *
+         * por eso se solicita explícitamente.
+         */
+        .addSelect('user.passwordHash')
+
+        .where(
+          `
+        (
+          LOWER(user.username) = :identifier
+          OR
+          LOWER(user.email) = :identifier
+        )
+      `,
+          {
+            identifier: normalized,
+          },
+        )
+
+        .andWhere('user.estado = :estado', {
+          estado: true,
+        })
+
+        .andWhere('user.fechaEliminacion IS NULL')
+
+        .getOne()
+    );
+  }
+
+  async findActiveWithRoles(id: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+
+      .leftJoinAndSelect(
+        'user.userRoles',
+        'userRole',
+        `
+        userRole.estado = :userRoleActive
+      `,
+        {
+          userRoleActive: true,
+        },
+      )
+
+      .leftJoinAndSelect(
+        'userRole.role',
+        'role',
+        `
+        role.estado = :roleActive
+        AND role.fechaEliminacion IS NULL
+      `,
+        {
+          roleActive: true,
+        },
+      )
+
+      .where('user.id = :id', {
+        id,
+      })
+
+      .andWhere('user.estado = :userActive', {
+        userActive: true,
+      })
+
+      .andWhere('user.fechaEliminacion IS NULL')
+
+      .getOne();
+  }
+
+  async incrementTokenVersion(userId: string): Promise<void> {
+    const result = await this.usersRepository.increment(
+      {
+        id: userId,
+
+        estado: true,
+
+        fechaEliminacion: IsNull(),
+      },
+      'tokenVersion',
+      1,
+    );
+
     if (!result.affected) {
       throw new NotFoundException('Usuario no encontrado');
     }

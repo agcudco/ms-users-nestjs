@@ -13,19 +13,18 @@ import {
 } from '@nestjs/common';
 
 import { Throttle } from '@nestjs/throttler';
-
 import { CreateRoleDto } from './dto/create-role.dto.js';
-
 import { UpdateRoleDto } from './dto/update-role.dto.js';
-
 import { RolesService } from './roles.service.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto/pagination-query.dto.js';
+import { Roles } from '../auth/decorators/roles/roles.decorator.js';
 
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post()
+  @Roles('ADMIN')
   @Throttle({
     default: {
       limit: 20,
@@ -40,6 +39,7 @@ export class RolesController {
   }
 
   @Get()
+  @Roles('ADMIN', 'OPERADOR')
   findAll(
     @Query()
     pagination: PaginationQueryDto,
@@ -48,6 +48,7 @@ export class RolesController {
   }
 
   @Get(':id')
+  @Roles('ADMIN', 'OPERADOR')
   findOne(
     @Param(
       'id',
@@ -61,6 +62,7 @@ export class RolesController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   update(
     @Param(
       'id',
@@ -77,6 +79,7 @@ export class RolesController {
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param(

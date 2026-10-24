@@ -11,16 +11,16 @@ import {
 } from '@nestjs/common';
 
 import { Throttle } from '@nestjs/throttler';
-
 import { CreateUserRoleDto } from './dto/create-user-role.dto.js';
-
 import { UserRolesService } from './user-roles.service.js';
+import { Roles } from '../auth/decorators/roles/roles.decorator.js';
 
 @Controller('user-roles')
 export class UserRolesController {
   constructor(private readonly userRolesService: UserRolesService) {}
 
   @Post()
+  @Roles('ADMIN')
   @Throttle({
     default: {
       limit: 20,
@@ -35,6 +35,7 @@ export class UserRolesController {
   }
 
   @Get('user/:userId')
+  @Roles('ADMIN', 'OPERADOR')
   findByUser(
     @Param(
       'userId',
@@ -48,6 +49,7 @@ export class UserRolesController {
   }
 
   @Delete(':userId/:roleId')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param(

@@ -42,7 +42,7 @@ async function bootstrap() {
   app.enableCors({
     origin: origins,
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Accept', 'X-Request-Id'],
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'X-Request-Id'],
     credentials: false,
     maxAge: 86400,
   });
@@ -102,6 +102,8 @@ async function bootstrap() {
   console.log(`User Service: http://localhost:${port}/api/v1`);
   if (nodeEnv !== 'production') {
     console.log(`Swagger: http://localhost:${port}/docs`);
+    console.log(`Login: http://localhost:${port}/api/v1/auth/login`);
+    console.log(`Health: http://localhost:${port}/api/v1/health`);
   }
 }
 
