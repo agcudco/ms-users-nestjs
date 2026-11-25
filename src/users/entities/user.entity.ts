@@ -79,6 +79,9 @@ export class User {
   })
   telefono!: string;
 
+  @Column({ type: 'text', nullable: true, select: false })
+  avatar!: string | null;
+
   @Exclude()
   @Column({
     name: 'password',

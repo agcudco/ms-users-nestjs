@@ -5,6 +5,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { envSchema } from './config/env.schema.js';
 import { RolesModule } from './roles/roles.module.js';
+import { ModulosModule } from './modulos/modulos.module.js';
+import { MenusModule } from './menus/menus.module.js';
 import { UserRolesModule } from './user-roles/user-roles.module.js';
 import { UsersModule } from './users/users.module.js';
 import { RequestIdMiddleware } from './common/middleware/request-id/request-id.middleware.js';
@@ -68,6 +70,8 @@ import { AppController } from './app.controller.js';
     }),
     UsersModule,
     RolesModule,
+    ModulosModule,
+    MenusModule,
     UserRolesModule,
     AuthModule,
   ],

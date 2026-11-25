@@ -17,7 +17,7 @@ export class LoginDto {
         : value,
   )
   @IsString()
-  @MinLength(4)
+  @MinLength(2)
   @MaxLength(150)
   identifier!: string;
 

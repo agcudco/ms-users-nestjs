@@ -90,6 +90,7 @@ async function bootstrap() {
       .setTitle('User Service')
       .setDescription('Microservicio de usuarios y roles')
       .setVersion('1.0')
+      .addBearerAuth()
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);

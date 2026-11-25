@@ -6,6 +6,7 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   MinLength,
@@ -36,15 +37,6 @@ export class CreateUserDto {
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
   )
-  @IsString()
-  @MinLength(4)
-  @MaxLength(50)
-  @Matches(/^[a-z0-9._-]+$/)
-  username!: string;
-
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim().toLowerCase() : value,
-  )
   @IsEmail()
   @MaxLength(150)
   email!: string;
@@ -55,12 +47,11 @@ export class CreateUserDto {
   })
   telefono: string;
 
-  @IsString()
-  @MinLength(12)
-  @MaxLength(128)
-  password!: string;
-
   @IsOptional()
   @IsBoolean()
   estado?: boolean;
+
+  @IsOptional()
+  @IsUUID('4')
+  roleId?: string;
 }

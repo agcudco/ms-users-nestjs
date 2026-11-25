@@ -7,6 +7,7 @@ import {
 } from '@nestjs/core';
 
 import * as argon2 from 'argon2';
+import { seedAdministracion } from './seed-administracion.js';
 
 import {
   DataSource,
@@ -702,6 +703,11 @@ async function seed(): Promise<void> {
         `Rol disponible: ${role.rol}`,
       );
     }
+
+    const admin = roles.get('ADMIN');
+    if (!admin) throw new Error('No se encontró el rol ADMIN para sembrar Administración');
+    await seedAdministracion(dataSource, admin.id);
+    logger.log('Módulo Administración y menús disponibles para ADMIN');
 
     /*
      * ========================================================
